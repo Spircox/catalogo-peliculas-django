@@ -1,0 +1,179 @@
+{% extends 'catalogo/base.html' %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Tu cine personal</h1>
+  <button class="btn btn-danger btn-lg" id="btn-azar">🎲 ¿Qué veo hoy?</button>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body"><h3>{{ datos.total }}</h3><span class="text-muted">Títulos</span></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body"><h3>{{ datos.pendientes }}</h3><span class="text-muted">Por ver</span></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body"><h3 class="text-primary">{{ datos.viendo }}</h3><span class="text-muted">Viendo</span></div></div></div>
+  <div class="col-6 col-md-3"><div class="card text-center shadow-sm"><div class="card-body"><h3 class="text-success">{{ datos.vistas }}</h3><span class="text-muted">Vistas</span></div></div></div>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-4"><div class="card text-center shadow-sm"><div class="card-body"><h3 class="text-warning">{% if datos.nota_media %}{{ datos.nota_media }}{% else %}-{% endif %}</h3><span class="text-muted">Nota media</span></div></div></div>
+  <div class="col-6 col-md-4"><div class="card text-center shadow-sm"><div class="card-body"><h3>🎬 {{ datos.horas }} h</h3><span class="text-muted">Horas de cine</span></div></div></div>
+  <div class="col-6 col-md-4"><div class="card text-center shadow-sm"><div class="card-body"><h3>⭐ {{ datos.favoritas }}</h3><span class="text-muted">Favoritas</span></div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-md-7">
+    <div class="card shadow-sm"><div class="card-body">
+      <h5 class="mb-3">Películas vistas por mes</h5>
+      <canvas id="grafica" height="120"></canvas>
+    </div></div>
+  </div>
+  <div class="col-md-5">
+    <div class="card shadow-sm"><div class="card-body">
+      <h5 class="mb-3">Tus géneros favoritos</h5>
+      {% for nombre, cantidad in generos_top %}
+      <div class="d-flex justify-content-between mb-2"><span>{{ nombre }}</span><span class="badge bg-secondary">{{ cantidad }}</span></div>
+      {% empty %}<p class="text-muted">Agrega títulos para ver estadísticas.</p>
+      {% endfor %}
+    </div></div>
+  </div>
+</div>
+
+{% if tendencias %}
+<h5 class="mt-4">🔥 Popular esta semana</h5>
+<div class="d-flex gap-2 overflow-auto pb-2">
+  {% for r in tendencias %}
+  <div class="text-center" style="min-width: 110px;">
+    <img src="{{ r.poster_url }}" style="width: 110px; border-radius: 6px;" alt="{{ r.nombre }}">
+    <div class="small mt-1">{{ r.nombre }}</div>
+    {% if r.en_catalogo %}<span class="badge bg-success">✔ En catálogo</span>
+    {% else %}
+    <form method="post" action="{% url 'catalogo:agregar' r.id r.tipo %}">{% csrf_token %}<button class="btn btn-sm btn-primary mt-1">+ Añadir</button></form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if top %}
+<h5 class="mt-4">🏆 Mejor valoradas de la historia</h5>
+<div class="d-flex gap-2 overflow-auto pb-2">
+  {% for r in top %}
+  <div class="text-center" style="min-width: 110px;">
+    <img src="{{ r.poster_url }}" style="width: 110px; border-radius: 6px;" alt="{{ r.nombre }}">
+    <div class="small mt-1">{{ r.nombre }}</div>
+    {% if r.en_catalogo %}<span class="badge bg-success">✔ En catálogo</span>
+    {% else %}
+    <form method="post" action="{% url 'catalogo:agregar' r.id r.tipo %}">{% csrf_token %}<button class="btn btn-sm btn-primary mt-1">+ Añadir</button></form>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Modal de la ruleta descubridora -->
+<div class="modal fade" id="modalAzar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-4">
+
+      <div id="azar-config">
+        <h4 class="mb-3">🎲 ¿Qué veo hoy?</h4>
+        <label class="form-label">Elige un género (opcional)</label>
+        <select id="azar-genero" class="form-select mb-3">
+          <option value="">🎭 Cualquier género</option>
+          {% for g in generos_tmdb %}
+          <option value="{{ g.id }}">{{ g.name }}</option>
+          {% endfor %}
+        </select>
+        <button class="btn btn-danger btn-lg w-100" id="btn-girar">🎰 Girar ruleta</button>
+      </div>
+
+      <div id="azar-giro" class="d-none">
+        <h4 id="azar-nombre" class="mb-3">Buscando candidatos...</h4>
+        <img id="azar-poster" src="" alt="" style="max-height: 280px; border-radius: 8px;" class="mx-auto">
+      </div>
+
+      <div id="azar-resultado" class="d-none">
+        <h4 class="mb-1">🎉 ¡Esta es tu película!</h4>
+        <h3 id="res-nombre" class="mb-2"></h3>
+        <img id="res-poster" src="" alt="" style="max-height: 280px; border-radius: 8px;" class="mx-auto mb-2">
+        <p id="res-meta" class="text-muted small"></p>
+        <div class="d-flex gap-2 justify-content-center">
+          <form method="post" id="form-agregar">
+            {% csrf_token %}
+            <button class="btn btn-primary">+ Añadir a mi catálogo</button>
+          </form>
+          <button class="btn btn-outline-secondary" id="btn-otra">🎰 Otra</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+  const g = {{ grafica|safe }};
+  new Chart(document.getElementById('grafica'), {
+    type: 'bar',
+    data: { labels: g.labels, datasets: [{ data: g.datos, backgroundColor: '#0d6efd' }] },
+    options: { plugins: { legend: { display: false } }, scales: { y: { ticks: { stepSize: 1 } } } }
+  });
+
+  // ---------- Ruleta descubridora ----------
+  const $ = id => document.getElementById(id);
+  const modalAzar = new bootstrap.Modal($('modalAzar'));
+  const urlRuleta = "{% url 'catalogo:ruleta' %}";
+  const urlAgregarBase = "{% url 'catalogo:agregar' 12345 'pelicula' %}";
+  let candidatos = [];
+
+  $('btn-azar').addEventListener('click', () => {
+    $('azar-config').classList.remove('d-none');
+    $('azar-giro').classList.add('d-none');
+    $('azar-resultado').classList.add('d-none');
+    modalAzar.show();
+  });
+
+    async function girar() {
+    $('azar-config').classList.add('d-none');
+    $('azar-resultado').classList.add('d-none');
+    $('azar-giro').classList.remove('d-none');
+    $('azar-nombre').textContent = 'Buscando candidatos...';
+
+    try {
+      const resp = await fetch(urlRuleta + '?genero=' + $('azar-genero').value);
+      const data = await resp.json();
+      if (data.error) { $('azar-nombre').textContent = '⚠️ ' + data.error; return; }
+      candidatos = data.candidatos || [];
+    } catch (e) {
+      $('azar-nombre').textContent = '⚠️ El servidor no respondió. Revisa la ruta /ruleta/ en urls.py.';
+      return;
+    }
+
+    if (!candidatos.length) {
+      $('azar-nombre').textContent = 'Sin candidatos 😕 Prueba otro género.';
+      return;
+    }
+
+    let i = 0;
+    const giro = setInterval(() => {
+      const p = candidatos[Math.floor(Math.random() * candidatos.length)];
+      $('azar-nombre').textContent = p.nombre;
+      $('azar-poster').src = p.poster;
+      if (++i > 16) {
+        clearInterval(giro);
+        resultado(candidatos[Math.floor(Math.random() * candidatos.length)]);
+      }
+    }, 110);
+  }
+  function resultado(p) {
+    $('azar-giro').classList.add('d-none');
+    $('azar-resultado').classList.remove('d-none');
+    $('res-nombre').textContent = p.nombre;
+    $('res-poster').src = p.poster;
+    $('res-meta').textContent = p.anio + ' · ⭐ ' + p.voto;
+    $('form-agregar').action = urlAgregarBase.replace('12345', p.id);
+  }
+
+  $('btn-girar').addEventListener('click', girar);
+  $('btn-otra').addEventListener('click', girar);
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends 'catalogo/base.html' %}
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h1>Mi catálogo</h1>
+  <a href="{% url 'catalogo:exportar' %}" class="btn btn-outline-secondary btn-sm">⬇ Exportar CSV</a>
+</div>
+
+<form method="get" class="card shadow-sm mb-4"><div class="card-body row g-2 align-items-end">
+  <div class="col-md-4"><input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por nombre..."></div>
+  <div class="col-md-3">
+    <select name="estado" class="form-select">
+      <option value="">Todos los estados</option>
+      {% for v, l in estados %}<option value="{{ v }}" {% if estado == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="tipo" class="form-select">
+      <option value="">Todo</option>
+      {% for v, l in tipos %}<option value="{{ v }}" {% if tipo == v %}selected{% endif %}>{{ l }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="col-md-1 form-check">
+    <input type="checkbox" name="fav" value="1" class="form-check-input" id="fav" {% if fav %}checked{% endif %}>
+    <label class="form-check-label" for="fav">⭐</label>
+  </div>
+  <div class="col-md-2"><button class="btn btn-primary w-100">🔍 Filtrar</button></div>
+</div></form>
+
+<div class="row g-3">
+  {% for t in titulos %}
+  <div class="col-6 col-md-3">
+    <div class="card h-100 shadow-sm">
+      <a href="{% url 'catalogo:detalle' t.pk %}">
+        {% if t.poster %}<img src="{{ t.poster }}" class="card-img-top" alt="{{ t.nombre }}">
+        {% else %}<div class="card-img-top bg-body d-flex align-items-center justify-content-center" style="height: 200px;">🎬</div>{% endif %}
+      </a>
+      <div class="card-body p-2">
+        <div class="small fw-bold">{% if t.favorito %}⭐ {% endif %}{{ t.nombre }}</div>
+        <div class="small text-muted">{{ t.anio }} · ⭐ {% if t.mi_nota %}{{ t.mi_nota }}/10{% else %}{{ t.voto_tmdb|floatformat:1 }}{% endif %}</div>
+      </div>
+      <div class="card-footer bg-body p-2">
+        <span class="badge {% if t.estado == 'vista' %}bg-success{% elif t.estado == 'viendo' %}bg-primary{% else %}bg-secondary{% endif %} w-100">{{ t.get_estado_display }}</span>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="alert alert-info">Tu catálogo está vacío. <a href="{% url 'catalogo:buscar' %}">Busca algo para empezar</a>.</div>
+  {% endfor %}
+</div>
+{% endblock %}
