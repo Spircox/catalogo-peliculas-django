@@ -10,7 +10,7 @@ ruleta \*"¿Qué veo hoy?"\* que sugiere películas que \*\*no tienes\*\*, filtr
 
 
 
-> 🔗 \*\*Demo en vivo:\*\* \*(próximamente)\*
+> 🔗 \*\*Demo en vivo:\*\* \*(https://scrodia.pythonanywhere.com/)\*
 
 
 
